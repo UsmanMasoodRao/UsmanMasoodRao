@@ -1,1 +1,59 @@
+% Wave Energy Converter (WEC) Control System in Simulink
+% Generates a Simulink model for a WEC with a PD control system
 
+% Clear previous Simulink models
+bdclose all;
+clc;
+clear;
+
+% Create a new Simulink model
+modelName = 'WEC_Control_Model';
+new_system(modelName);
+open_system(modelName);
+
+%% Define Parameters
+m = 1000;  % Mass of the float (kg)
+b = 200;   % Damping coefficient (Ns/m)
+k = 3000;  % Stiffness coefficient (N/m)
+Kp = 500;  % Proportional gain of PTO
+Kd = 50;   % Derivative gain of PTO
+
+%% Create Blocks
+% Add input block (Wave Force)
+waveForce = 'Wave_Force';
+add_block('simulink/Sources/Sine Wave', [modelName, '/', waveForce], ...
+    'Amplitude', '1000', 'Frequency', '1', 'Position', [30, 50, 80, 70]);
+
+% Add Sum block (Net Force Calculation)
+sumBlock = 'Sum_Force';
+add_block('simulink/Math Operations/Sum', [modelName, '/', sumBlock], ...
+    'Inputs', '|++-', 'Position', [150, 50, 180, 90]);
+
+% Add Transfer Function block (WEC Dynamics)
+tfBlock = 'WEC_Dynamics';
+num = '[1]';  % Numerator (F -> Velocity)
+den = sprintf('[%d %d %d]', m, b, k);  % Denominator (m, b, k)
+add_block('simulink/Continuous/Transfer Fcn', [modelName, '/', tfBlock], ...
+    'Numerator', num, 'Denominator', den, 'Position', [250, 50, 350, 90]);
+
+% Add PD Controller (PTO)
+pdController = 'PD_Control';
+add_block('simulink/Discrete/Discrete PID Controller', [modelName, '/', pdController], ...
+    'P', num2str(Kp), 'D', num2str(Kd), 'SampleTime', '0', 'Position', [400, 50, 500, 90]);
+
+% Add Scope (Output Visualization)
+scopeBlock = 'Scope';
+add_block('simulink/Sinks/Scope', [modelName, '/', scopeBlock], ...
+    'Position', [550, 50, 600, 90]);
+
+%% Connect Blocks
+add_line(modelName, [waveForce, '/1'], [sumBlock, '/1']);  % Wave force input
+add_line(modelName, [sumBlock, '/1'], [tfBlock, '/1']);    % Net force to dynamics
+add_line(modelName, [tfBlock, '/1'], [pdController, '/1']); % Velocity to PD controller
+add_line(modelName, [pdController, '/1'], [sumBlock, '/2']); % PTO force to sum
+add_line(modelName, [tfBlock, '/1'], [scopeBlock, '/1']);  % Output to scope
+
+%% Save and Run Model
+save_system(modelName);
+disp('Simulink Model Created: Open the model to view and run simulations.');
+open_system(modelName);
