@@ -12,6 +12,7 @@ new_system(modelName);
 open_system(modelName);
 
 %% Define Parameters
+r=233;
 m = 1000;  % Mass of the float (kg)
 b = 200;   % Damping coefficient (Ns/m)
 k = 3000;  % Stiffness coefficient (N/m)
